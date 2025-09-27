@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG知识库检索系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Microsoft YaHei', sans-serif;
+        }
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 20px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 10px;
+            padding: 10px 20px;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+        }
+        .search-result {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+        .search-result:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+        .search-result .metadata {
+            font-size: 0.9em;
+            color: #6c757d;
+            margin-top: 10px;
+        }
+        .upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            background: #f8f9ff;
+            transition: all 0.3s ease;
+        }
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background: #e8ebff;
+        }
+        .status-message {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .status-success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .status-error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        .spinner-border {
+            width: 2rem;
+            height: 2rem;
+        }
+        .stats {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .nav-tabs .nav-link {
+            border: none;
+            color: #6c757d;
+            border-radius: 10px 10px 0 0;
+        }
+        .nav-tabs .nav-link.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="text-center mb-4">
+            <h1 class="display-4 text-primary">
+                <i class="fas fa-brain"></i> RAG知识库检索系统
+            </h1>
+            <p class="lead text-muted">基于LangChain的智能知识检索平台</p>
+        </div>
+
+        <!-- 系统状态 -->
+        <div class="stats">
+            <div class="row">
+                <div class="col-md-4">
+                    <h5><i class="fas fa-database"></i> 向量数据库</h5>
+                    <p id="db-status">检查中...</p>
+                </div>
+                <div class="col-md-4">
+                    <h5><i class="fas fa-file-alt"></i> 文档数量</h5>
+                    <p id="doc-count">统计中...</p>
+                </div>
+                <div class="col-md-4">
+                    <h5><i class="fas fa-search"></i> 检索状态</h5>
+                    <p id="search-status">就绪</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 功能标签页 -->
+        <ul class="nav nav-tabs mb-4" id="mainTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="search-tab" data-bs-toggle="tab" data-bs-target="#search" type="button" role="tab">
+                    <i class="fas fa-search"></i> 知识检索
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="upload-tab" data-bs-toggle="tab" data-bs-target="#upload" type="button" role="tab">
+                    <i class="fas fa-upload"></i> 文件上传
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="text-tab" data-bs-toggle="tab" data-bs-target="#text" type="button" role="tab">
+                    <i class="fas fa-keyboard"></i> 文本输入
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="mainTabContent">
+            <!-- 知识检索 -->
+            <div class="tab-pane fade show active" id="search" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="mb-0"><i class="fas fa-search"></i> 知识检索</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="input-group mb-3">
+                                    <input type="text" class="form-control" id="searchQuery" placeholder="请输入您的问题或关键词...">
+                                    <button class="btn btn-primary" type="button" onclick="searchKnowledge()">
+                                        <i class="fas fa-search"></i> 搜索
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <select class="form-select" id="searchCount">
+                                    <option value="3">返回3个结果</option>
+                                    <option value="5" selected>返回5个结果</option>
+                                    <option value="10">返回10个结果</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="loading" id="searchLoading">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">搜索中...</span>
+                            </div>
+                            <p class="mt-2">正在搜索相关知识...</p>
+                        </div>
+                        
+                        <div id="searchResults"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 文件上传 -->
+            <div class="tab-pane fade" id="upload" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="mb-0"><i class="fas fa-upload"></i> 文件上传</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="upload-area" id="uploadArea">
+                            <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+                            <h5>拖拽文件到此处或点击选择文件</h5>
+                            <p class="text-muted">支持格式：TXT, PDF, DOCX, PPTX</p>
+                            <input type="file" id="fileInput" accept=".txt,.pdf,.docx,.pptx" multiple style="display: none;">
+                            <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                                <i class="fas fa-folder-open"></i> 选择文件
+                            </button>
+                        </div>
+                        
+                        <div id="uploadStatus"></div>
+                        <div id="fileList"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 文本输入 -->
+            <div class="tab-pane fade" id="text" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="mb-0"><i class="fas fa-keyboard"></i> 文本输入</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="textInput" class="form-label">请输入要添加的知识内容：</label>
+                            <textarea class="form-control" id="textInput" rows="6" placeholder="请输入文本内容..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="textTitle" class="form-label">标题（可选）：</label>
+                            <input type="text" class="form-control" id="textTitle" placeholder="为这段知识添加标题...">
+                        </div>
+                        <button class="btn btn-primary" onclick="addText()">
+                            <i class="fas fa-plus"></i> 添加知识
+                        </button>
+                        
+                        <div id="textStatus"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 全局变量
+        let apiBaseUrl = '';
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+        });
+
+        // 初始化应用
+        function initializeApp() {
+            checkSystemStatus();
+            setupFileUpload();
+            setupSearch();
+        }
+
+        // 检查系统状态
+        function checkSystemStatus() {
+            fetch('/api/health')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('db-status').textContent = 
+                        data.vectorstore === 'initialized' ? '已连接' : '未连接';
+                })
+                .catch(error => {
+                    console.error('检查系统状态失败:', error);
+                    document.getElementById('db-status').textContent = '连接失败';
+                });
+        }
+
+        // 设置文件上传
+        function setupFileUpload() {
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
+
+            // 拖拽事件
+            uploadArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+
+            uploadArea.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+            });
+
+            uploadArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                handleFiles(e.dataTransfer.files);
+            });
+
+            // 文件选择事件
+            fileInput.addEventListener('change', function(e) {
+                handleFiles(e.target.files);
+            });
+        }
+
+        // 处理文件上传
+        function handleFiles(files) {
+            const fileList = document.getElementById('fileList');
+            const uploadStatus = document.getElementById('uploadStatus');
+            
+            fileList.innerHTML = '';
+            
+            Array.from(files).forEach(file => {
+                if (isFileAllowed(file)) {
+                    uploadFile(file);
+                } else {
+                    showStatus('不支持的文件类型: ' + file.name, 'error', uploadStatus);
+                }
+            });
+        }
+
+        // 检查文件类型是否允许
+        function isFileAllowed(file) {
+            const allowedTypes = ['text/plain', 'application/pdf', 
+                               'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                               'application/vnd.openxmlformats-officedocument.presentationml.presentation'];
+            const allowedExtensions = ['.txt', '.pdf', '.docx', '.pptx'];
+            
+            return allowedTypes.includes(file.type) || 
+                   allowedExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+        }
+
+        // 上传文件
+        function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const uploadStatus = document.getElementById('uploadStatus');
+            
+            showStatus(`正在上传: ${file.name}`, 'info', uploadStatus);
+
+            fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    showStatus(`${file.name}: ${data.message}`, 'success', uploadStatus);
+                    addFileToList(file, true);
+                } else {
+                    showStatus(`${file.name}: ${data.error}`, 'error', uploadStatus);
+                    addFileToList(file, false);
+                }
+            })
+            .catch(error => {
+                showStatus(`${file.name}: 上传失败`, 'error', uploadStatus);
+                addFileToList(file, false);
+            });
+        }
+
+        // 添加文件到列表
+        function addFileToList(file, success) {
+            const fileList = document.getElementById('fileList');
+            const fileItem = document.createElement('div');
+            fileItem.className = 'alert alert-' + (success ? 'success' : 'danger');
+            fileItem.innerHTML = `
+                <i class="fas fa-${success ? 'check' : 'times'}"></i>
+                ${file.name} (${(file.size / 1024).toFixed(2)} KB)
+            `;
+            fileList.appendChild(fileItem);
+        }
+
+        // 设置搜索功能
+        function setupSearch() {
+            const searchInput = document.getElementById('searchQuery');
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchKnowledge();
+                }
+            });
+        }
+
+        // 搜索知识
+        function searchKnowledge() {
+            const query = document.getElementById('searchQuery').value.trim();
+            const k = document.getElementById('searchCount').value;
+            const resultsDiv = document.getElementById('searchResults');
+            const loading = document.getElementById('searchLoading');
+
+            if (!query) {
+                showStatus('请输入搜索关键词', 'error', resultsDiv);
+                return;
+            }
+
+            loading.style.display = 'block';
+            resultsDiv.innerHTML = '';
+
+            fetch('/api/search', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ query: query, k: parseInt(k) })
+            })
+            .then(response => response.json())
+            .then(data => {
+                loading.style.display = 'none';
+                displaySearchResults(data.results, data.count);
+            })
+            .catch(error => {
+                loading.style.display = 'none';
+                showStatus('搜索失败，请稍后重试', 'error', resultsDiv);
+            });
+        }
+
+        // 显示搜索结果
+        function displaySearchResults(results, count) {
+            const resultsDiv = document.getElementById('searchResults');
+            
+            if (results.length === 0) {
+                resultsDiv.innerHTML = '<div class="alert alert-info">没有找到相关的知识内容</div>';
+                return;
+            }
+
+            resultsDiv.innerHTML = `
+                <div class="alert alert-success">
+                    找到 ${count} 个相关结果
+                </div>
+            `;
+
+            results.forEach((result, index) => {
+                const resultItem = document.createElement('div');
+                resultItem.className = 'search-result';
+                resultItem.innerHTML = `
+                    <h6><i class="fas fa-file-alt"></i> 结果 ${index + 1}</h6>
+                    <p>${result.content}</p>
+                    <div class="metadata">
+                        <small>
+                            <i class="fas fa-info-circle"></i>
+                            来源: ${result.metadata.source || '未知'} | 
+                            类型: ${result.metadata.type || '未知'}
+                        </small>
+                    </div>
+                `;
+                resultsDiv.appendChild(resultItem);
+            });
+        }
+
+        // 添加文本知识
+        function addText() {
+            const text = document.getElementById('textInput').value.trim();
+            const title = document.getElementById('textTitle').value.trim();
+            const textStatus = document.getElementById('textStatus');
+
+            if (!text) {
+                showStatus('请输入文本内容', 'error', textStatus);
+                return;
+            }
+
+            fetch('/api/add_text', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ text: text, title: title })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    showStatus(data.message, 'success', textStatus);
+                    document.getElementById('textInput').value = '';
+                    document.getElementById('textTitle').value = '';
+                } else {
+                    showStatus(data.error, 'error', textStatus);
+                }
+            })
+            .catch(error => {
+                showStatus('添加失败，请稍后重试', 'error', textStatus);
+            });
+        }
+
+        // 显示状态消息
+        function showStatus(message, type, container) {
+            const statusDiv = document.createElement('div');
+            statusDiv.className = `status-message status-${type}`;
+            statusDiv.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'times' : 'info'}"></i>
+                ${message}
+            `;
+            
+            container.appendChild(statusDiv);
+            
+            // 3秒后自动移除
+            setTimeout(() => {
+                statusDiv.remove();
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
