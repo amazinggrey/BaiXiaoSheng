@@ -455,13 +455,24 @@ class RAGSystem:
                     documents = sample['documents']
                     avg_length = sum(len(doc) if isinstance(doc, str) else len(doc.get('document', '')) for doc in documents) / len(documents)
 
+            # 获取嵌入模型名称，根据不同类型的嵌入模型使用不同的属性
+            embedding_model_name = ""
+            if hasattr(self.embedding_model, 'model'):
+                embedding_model_name = self.embedding_model.model
+            elif hasattr(self.embedding_model, 'model_name'):
+                embedding_model_name = self.embedding_model.model_name
+            elif hasattr(self.embedding_model, 'model'):
+                embedding_model_name = self.embedding_model.model
+            else:
+                embedding_model_name = str(type(self.embedding_model).__name__)
+            
             return {
                 "collection_name": self.collection_name,
                 "total_documents": count,
                 "avg_chunk_length": avg_length,
                 "chunk_size": self.chunk_size,
                 "chunk_overlap": self.chunk_overlap,
-                "embedding_model": self.embedding_model.model,
+                "embedding_model": embedding_model_name,
                 "llm_model": self.llm.model_name
             }
             
@@ -477,10 +488,19 @@ class RAGSystem:
             Dict: 系统状态信息
         """
         try:
+            # 获取嵌入模型名称，根据不同类型的嵌入模型使用不同的属性
+            embedding_model_name = ""
+            if hasattr(self.embedding_model, 'model'):
+                embedding_model_name = self.embedding_model.model
+            elif hasattr(self.embedding_model, 'model_name'):
+                embedding_model_name = self.embedding_model.model_name
+            else:
+                embedding_model_name = str(type(self.embedding_model).__name__)
+            
             return {
                 "llm_provider": "OpenAI",
                 "llm_model": self.llm.model_name,
-                "embedding_model": self.embedding_model.model,
+                "embedding_model": embedding_model_name,
                 "collection_name": self.collection_name,
                 "chunk_size": self.chunk_size,
                 "chunk_overlap": self.chunk_overlap,
