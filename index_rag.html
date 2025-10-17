@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="pageTitle">礼尚往来业务技术知识库检索系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Microsoft YaHei', sans-serif;
+        }
+        .language-switcher {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        .language-switcher .dropdown-menu {
+            min-width: 120px;
+        }
+        .language-switcher .dropdown-item {
+            padding: 8px 16px;
+            cursor: pointer;
+        }
+        .language-switcher .dropdown-item:hover {
+            background-color: #f8f9fa;
+        }
+        .language-switcher .dropdown-item.active {
+            background-color: #667eea;
+            color: white;
+        }
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 20px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 10px;
+            padding: 10px 20px;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+        }
+        .search-result {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+        .search-result:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+        .search-result .metadata {
+            font-size: 0.9em;
+            color: #6c757d;
+            margin-top: 10px;
+        }
+        .upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            background: #f8f9ff;
+            transition: all 0.3s ease;
+        }
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background: #e8ebff;
+        }
+        .status-message {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .status-success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .status-error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        .spinner-border {
+            width: 2rem;
+            height: 2rem;
+        }
+        .stats {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .nav-tabs .nav-link {
+            border: none;
+            color: #6c757d;
+            border-radius: 10px 10px 0 0;
+        }
+        .nav-tabs .nav-link.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .chat-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            background: white;
+        }
+        .chat-message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 10px;
+        }
+        .chat-user {
+            background: #e3f2fd;
+            text-align: right;
+        }
+        .chat-assistant {
+            background: #f3e5f5;
+            text-align: left;
+        }
+        .chat-input {
+            position: sticky;
+            bottom: 0;
+            background: white;
+            padding: 15px;
+            border-top: 1px solid #e9ecef;
+        }
+        .context-info {
+            background: #e8f4f8;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 0.9em;
+        }
+        .similarity-badge {
+            background: #198754;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 0.8em;
+        }
+    </style>
+</head>
+<body>
+    <!-- 语言切换器 -->
+    <div class="language-switcher">
+        <div class="dropdown">
+            <button class="btn btn-outline-primary dropdown-toggle" type="button" id="languageDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fas fa-globe"></i> <span id="currentLang">中文</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="languageDropdown">
+                <li><a class="dropdown-item active" href="#" data-lang="zh">中文</a></li>
+                <li><a class="dropdown-item" href="#" data-lang="ja">日本語</a></li>
+                <li><a class="dropdown-item" href="#" data-lang="en">English</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="text-center mb-4">
+            <h1 class="display-4 text-primary">
+                <i class="fas fa-brain"></i><span id="systemTitle">礼尚往来知识库检索系统</span>
+            </h1>
+            <div class="mt-3">
+                <span class="badge bg-secondary fs-6">
+                    <i class="fas fa-users" ></i><span id="teamid">开发团队：礼尚往来</span>
+                </span>
+            </div>
+        </div>
+
+        <!-- 系统状态 -->
+        <div class="stats">
+            <div class="row">
+                <div class="col-md-3">
+                    <h5><i class="fas fa-microchip"></i> <span data-i18n="embeddingModel">嵌入模型</span></h5>
+                    <p id="embedding-status"><span data-i18n="checking">检查中...</span></p>
+                </div>
+                <div class="col-md-3">
+                    <h5><i class="fas fa-robot"></i> <span data-i18n="llmConfig">LLM配置</span></h5>
+                    <p id="llm-status"><span data-i18n="checking">检查中...</span></p>
+                </div>
+                <div class="col-md-3">
+                    <h5><i class="fas fa-database"></i> <span data-i18n="knowledgeBase">知识库</span></h5>
+                    <p id="knowledge-status"><span data-i18n="statistics">统计中...</span></p>
+                </div>
+                <div class="col-md-3">
+                    <h5><i class="fas fa-comments"></i> <span data-i18n="conversation">系统状态</span></h5>
+                    <p id="conversation-status"><span data-i18n="ready">准备就绪</span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 功能标签页 -->
+        <ul class="nav nav-tabs mb-4" id="mainTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="chat-tab" data-bs-toggle="tab" data-bs-target="#chat" type="button" role="tab">
+                    <i class="fas fa-comments"></i> <span data-i18n="intelligentChat">智能对话</span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="upload-tab" data-bs-toggle="tab" data-bs-target="#upload" type="button" role="tab">
+                    <i class="fas fa-upload"></i> <span data-i18n="fileUpload">文件上传</span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="text-tab" data-bs-toggle="tab" data-bs-target="#text" type="button" role="tab">
+                    <i class="fas fa-keyboard"></i> <span data-i18n="textInput">文本输入</span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="search-tab" data-bs-toggle="tab" data-bs-target="#search" type="button" role="tab">
+                    <i class="fas fa-search"></i> <span data-i18n="knowledgeSearch">知识检索</span>
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="mainTabContent">
+            <!-- 智能对话 -->
+            <div class="tab-pane fade show active" id="chat" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="mb-0"><i class="fas fa-comments"></i> <span data-i18n="intelligentChatTitle">智能对话</span></h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="chat-container" id="chatContainer">
+                            <div class="chat-message chat-assistant">
+                                <strong><span data-i18n="aiAssistant">AI助手</span>:</strong> <span id="welcomeMessage">你好！我是您的智能知识库助手。您可以向我提问，我会基于知识库中的信息为您解答问题。</span>
+                            </div>
+                        </div>
+                        
+                        <div class="chat-input">
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="chatQuery" placeholder="请输入您的问题..."
+                                       onkeypress="if(event.key === 'Enter') { sendChatMessage(); }">
+                                <button class="btn btn-primary" type="button" onclick="sendChatMessage()">
+                                    <i class="fas fa-paper-plane"></i> <span data-i18n="send">发送</span>
+                                </button>
+                                <button class="btn btn-secondary" type="button" onclick="clearChat()">
+                                    <i class="fas fa-trash"></i> <span data-i18n="clear">清空</span>
+                                </button>
+                            </div>
+                            
+                            <div class="mt-2">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label for="chatK" class="form-label"><span data-i18n="knowledgeFragments">知识片段数量</span></label>
+                                        <select class="form-select" id="chatK">
+                                            <option value="3">3个</option>
+                                            <option value="5" selected>5个</option>
+                                            <option value="10">10个</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="temperature" class="form-label"><span data-i18n="creativity">创造性 (温度)</span></label>
+                                        <input type="range" class="form-range" id="temperature"
+                                               min="0" max="1" step="0.1" value="0.7">
+                                        <small class="text-muted"><span data-i18n="current">当前</span>: <span id="tempValue">0.7</span></small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="loading" id="chatLoading">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden"><span data-i18n="thinking">思考中...</span></span>
+                            </div>
+                            <p class="mt-2"><span data-i18n="searching">正在检索知识并生成回答...</span></p>
+                        </div>
+                        
+                        <div id="chatStatus"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 文件上传 -->
+            <div class="tab-pane fade" id="upload" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="mb-0"><i class="fas fa-upload"></i> <span data-i18n="fileUpload">文件上传</span></h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="upload-area" id="uploadArea">
+                            <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+                            <h5><span data-i18n="dragDropFile">拖拽文件到此处或点击选择文件</span></h5>
+                            <p class="text-muted"><span data-i18n="supportedFormats">支持格式：TXT, PDF, DOCX, PPTX</span></p>
+                            <input type="file" id="fileInput" accept=".txt,.pdf,.docx,.pptx" multiple style="display: none;">
+                            <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                                <i class="fas fa-folder-open"></i> <span data-i18n="selectFile">选择文件</span>
+                            </button>
+                        </div>
+                        
+                        <div id="uploadStatus"></div>
+                        <div id="fileList"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 文本输入 -->
+            <div class="tab-pane fade" id="text" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="mb-0"><i class="fas fa-keyboard"></i> <span data-i18n="textInput">文本输入</span></h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="textInput" class="form-label">请输入要添加的知识内容：</label>
+                            <textarea class="form-control" id="textInput" rows="6" placeholder="请输入文本内容..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="textTitle" class="form-label"><span data-i18n="titleOptional">标题（可选）：</span></label>
+                            <input type="text" class="form-control" id="textTitle" placeholder="为这段知识添加标题...">
+                        </div>
+                        <button class="btn btn-primary" onclick="addText()">
+                            <i class="fas fa-plus"></i> <span data-i18n="addKnowledge">添加知识</span>
+                        </button>
+                        
+                        <div id="textStatus"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 知识检索 -->
+            <div class="tab-pane fade" id="search" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="mb-0"><i class="fas fa-search"></i> <span data-i18n="knowledgeSearch">知识检索</span></h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="input-group mb-3">
+                                    <input type="text" class="form-control" id="searchQuery" placeholder="请输入您的问题或关键词...">
+                                    <button class="btn btn-primary" type="button" onclick="searchKnowledge()">
+                                        <i class="fas fa-search"></i> <span data-i18n="searchButton">搜索</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <select class="form-select" id="searchCount">
+                                    <option value="3">3个</option>
+                                    <option value="5" selected>5个</option>
+                                    <option value="10">10个</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="loading" id="searchLoading">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden"><span data-i18n="searchingKnowledge">正在搜索相关知识...</span></span>
+                            </div>
+                            <p class="mt-2"><span data-i18n="searchingKnowledge">正在搜索相关知识...</span></p>
+                        </div>
+                        
+                        <div id="searchResults"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 多语言支持
+        const translations = {
+            zh: {
+                pageTitle: "GienTech百晓生知识库检索系统",
+                systemTitle: "GienTech百晓生",
+                teamid: "开发团队：礼尚往来",
+                currentLang: "中文",
+                embeddingModel: "嵌入模型",
+                llmConfig: "LLM配置",
+                knowledgeBase: "知识库",
+                conversation: "系统状态",
+                checking: "检查中...",
+                statistics: "统计中...",
+                ready: "准备就绪",
+                intelligentChat: "智能对话",
+                intelligentChatTitle: "智能对话",
+                fileUpload: "文件上传",
+                textInput: "文本输入",
+                knowledgeSearch: "知识检索",
+                aiAssistant: "GienTech百晓生",
+                welcomeMessage: "你好！我是您的智能知识库助手。您可以向我提问，我会基于知识库中的信息为您解答问题。",
+                yourQuestion: "请输入您的问题...",
+                send: "发送",
+                clear: "清空",
+                knowledgeFragments: "知识片段数量",
+                creativity: "创造性 (温度)",
+                current: "当前",
+                thinking: "思考中...",
+                searching: "正在检索知识并生成回答...",
+                dragDropFile: "拖拽文件到此处或点击选择文件",
+                supportedFormats: "支持格式：TXT, PDF, DOCX, PPTX",
+                selectFile: "选择文件",
+                enterText: "请输入要添加的知识内容：",
+                textPlaceholder: "请输入文本内容...",
+                titleOptional: "标题（可选）：",
+                titlePlaceholder: "为这段知识添加标题...",
+                addKnowledge: "添加知识",
+                searchPlaceholder: "请输入您的问题或关键词...",
+                searchButton: "搜索",
+                returnResults: "返回",
+                results: "个结果",
+                searchingKnowledge: "正在搜索相关知识...",
+                noResults: "没有找到相关的知识内容",
+                foundResults: "找到",
+                result: "结果",
+                source: "来源",
+                type: "类型",
+                similarity: "相似度",
+                unknown: "未知",
+                you: "您",
+                chatCleared: "聊天已清空，您可以开始新的对话。",
+                errorOccurred: "抱歉，处理您的问题时出现了错误：",
+                systemError: "抱歉，系统出现了错误，请稍后重试。",
+                retrievedFragments: "检索到的知识片段:",
+                enterTextContent: "请输入文本内容",
+                addFailed: "添加失败，请稍后重试",
+                uploadSuccess: "上传成功",
+                uploadFailed: "上传失败",
+                fileTypeNotSupported: "不支持的文件类型",
+                uploading: "正在上传"
+            },
+            ja: {
+                pageTitle: "GienTech百曉生業務技術ナレッジベース検索システム",
+                systemTitle: "GienTech百曉生",
+                teamid: "開発チーム：礼尚往来",
+                currentLang: "日本語",
+                embeddingModel: "埋め込みモデル",
+                llmConfig: "LLM設定",
+                knowledgeBase: "ナレッジベース",
+                conversation: "システムステータス",
+                checking: "確認中...",
+                statistics: "統計中...",
+                ready: "準備完了",
+                intelligentChat: "インテリジェントチャット",
+                intelligentChatTitle: "インテリジェントチャット",
+                fileUpload: "ファイルアップロード",
+                textInput: "テキスト入力",
+                knowledgeSearch: "ナレッジ検索",
+                aiAssistant: "GienTech百曉生",
+                welcomeMessage: "こんにちは！私はあなたのインテリジェントナレッジベースアシスタントです。ナレッジベースの情報に基づいて質問にお答えします。",
+                yourQuestion: "ご質問を入力してください...",
+                send: "送信",
+                clear: "クリア",
+                knowledgeFragments: "ナレッジフラグメント数",
+                creativity: "創造性 (温度)",
+                current: "現在",
+                thinking: "思考中...",
+                searching: "ナレッジを検索し回答を生成中...",
+                dragDropFile: "ここにファイルをドラッグするかクリックして選択",
+                supportedFormats: "対応形式：TXT, PDF, DOCX, PPTX",
+                selectFile: "ファイル選択",
+                enterText: "追加するナレッジ内容を入力してください：",
+                textPlaceholder: "テキスト内容を入力してください...",
+                titleOptional: "タイトル（オプション）：",
+                titlePlaceholder: "このナレッジにタイトルを追加...",
+                addKnowledge: "ナレッジ追加",
+                searchPlaceholder: "ご質問やキーワードを入力してください...",
+                searchButton: "検索",
+                returnResults: "返す",
+                results: "個の結果",
+                searchingKnowledge: "関連ナレッジを検索中...",
+                noResults: "関連するナレッジが見つかりませんでした",
+                foundResults: "見つかりました",
+                result: "結果",
+                source: "ソース",
+                type: "タイプ",
+                similarity: "類似度",
+                unknown: "不明",
+                you: "あなた",
+                chatCleared: "チャットがクリアされました。新しい対話を開始できます。",
+                errorOccurred: "申し訳ありませんが、ご質問の処理中にエラーが発生しました：",
+                systemError: "申し訳ありませんが、システムエラーが発生しました。後でもう一度お試しください。",
+                retrievedFragments: "取得したナレッジフラグメント:",
+                enterTextContent: "テキスト内容を入力してください",
+                addFailed: "追加に失敗しました。後でもう一度お試しください",
+                uploadSuccess: "アップロード成功",
+                uploadFailed: "アップロード失敗",
+                fileTypeNotSupported: "サポートされていないファイルタイプ",
+                uploading: "アップロード中"
+            },
+            en: {
+                pageTitle: "GienTech Omniscient Business Technology Knowledge Base Retrieval System",
+                systemTitle: "GienTech Omniscient",
+                teamid: "Development Team: LISHANGWANGLAI",
+                currentLang: "English",
+                embeddingModel: "Embedding Model",
+                llmConfig: "LLM Configuration",
+                knowledgeBase: "Knowledge Base",
+                conversation: "System Status",
+                checking: "Checking...",
+                statistics: "Statistics...",
+                ready: "Ready",
+                intelligentChat: "Intelligent Chat",
+                intelligentChatTitle: "Intelligent Chat",
+                fileUpload: "File Upload",
+                textInput: "Text Input",
+                knowledgeSearch: "Knowledge Search",
+                aiAssistant: "GienTech Omniscient",
+                welcomeMessage: "Hello! I am your intelligent knowledge base assistant. You can ask me questions, and I will answer based on the information in the knowledge base.",
+                yourQuestion: "Please enter your question...",
+                send: "Send",
+                clear: "Clear",
+                knowledgeFragments: "Knowledge Fragments",
+                creativity: "Creativity (Temperature)",
+                current: "Current",
+                thinking: "Thinking...",
+                searching: "Searching knowledge and generating response...",
+                dragDropFile: "Drag files here or click to select",
+                supportedFormats: "Supported formats: TXT, PDF, DOCX, PPTX",
+                selectFile: "Select Files",
+                enterText: "Please enter the knowledge content to add:",
+                textPlaceholder: "Please enter text content...",
+                titleOptional: "Title (Optional):",
+                titlePlaceholder: "Add a title for this knowledge...",
+                addKnowledge: "Add Knowledge",
+                searchPlaceholder: "Please enter your question or keywords...",
+                searchButton: "Search",
+                returnResults: "Return",
+                results: "results",
+                searchingKnowledge: "Searching related knowledge...",
+                noResults: "No related knowledge content found",
+                foundResults: "Found",
+                result: "Result",
+                source: "Source",
+                type: "Type",
+                similarity: "Similarity",
+                unknown: "Unknown",
+                you: "You",
+                chatCleared: "Chat cleared, you can start a new conversation.",
+                errorOccurred: "Sorry, an error occurred while processing your question:",
+                systemError: "Sorry, a system error occurred, please try again later.",
+                retrievedFragments: "Retrieved knowledge fragments:",
+                enterTextContent: "Please enter text content",
+                addFailed: "Add failed, please try again later",
+                uploadSuccess: "Upload successful",
+                uploadFailed: "Upload failed",
+                fileTypeNotSupported: "File type not supported",
+                uploading: "Uploading"
+            }
+        };
+
+        // 当前语言
+        let currentLanguage = 'zh';
+
+        // 全局变量
+        let conversationHistory = [];
+        let contextDocs = [];
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            restoreLanguage();
+            initializeApp();
+        });
+
+        // 初始化应用
+        function initializeApp() {
+            checkSystemStatus();
+            setupFileUpload();
+            setupSearch();
+            setupChat();
+            setupLanguageSwitcher();
+        }
+
+        // 设置语言切换器
+        function setupLanguageSwitcher() {
+            const languageItems = document.querySelectorAll('.language-switcher .dropdown-item');
+            
+            languageItems.forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const lang = this.getAttribute('data-lang');
+                    switchLanguage(lang);
+                });
+            });
+        }
+
+        // 切换语言
+        function switchLanguage(lang) {
+            currentLanguage = lang;
+            
+            // 更新当前语言显示
+            document.getElementById('currentLang').textContent = translations[lang].currentLang;
+            
+            // 更新活动状态
+            document.querySelectorAll('.language-switcher .dropdown-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.getAttribute('data-lang') === lang) {
+                    item.classList.add('active');
+                }
+            });
+            
+            // 更新页面标题
+            document.getElementById('pageTitle').textContent = translations[lang].pageTitle;
+            document.getElementById('systemTitle').textContent = translations[lang].systemTitle;
+            document.getElementById('teamid').textContent = translations[lang].teamid;
+            document.getElementById('welcomeMessage').textContent = translations[lang].welcomeMessage;
+            
+            // 更新所有带有 data-i18n 属性的元素
+            document.querySelectorAll('[data-i18n]').forEach(element => {
+                const key = element.getAttribute('data-i18n');
+                if (translations[lang][key]) {
+                    element.textContent = translations[lang][key];
+                }
+            });
+            
+            // 更新输入框占位符
+            updatePlaceholders(lang);
+            
+            // 保存语言设置到本地存储
+            localStorage.setItem('preferredLanguage', lang);
+        }
+
+        // 更新输入框占位符
+        function updatePlaceholders(lang) {
+            const placeholders = {
+                'chatQuery': translations[lang].yourQuestion,
+                'textInput': translations[lang].textPlaceholder,
+                'textTitle': translations[lang].titlePlaceholder,
+                'searchQuery': translations[lang].searchPlaceholder
+            };
+            
+            Object.keys(placeholders).forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.placeholder = placeholders[id];
+                }
+            });
+        }
+
+        // 页面加载时恢复语言设置
+        function restoreLanguage() {
+            const savedLang = localStorage.getItem('preferredLanguage');
+            if (savedLang && translations[savedLang]) {
+                switchLanguage(savedLang);
+            }
+        }
+
+        // 检查系统状态
+        function checkSystemStatus() {
+            fetch('/api/system_info')
+                .then(response => response.json())
+                .then(data => {
+                    const embeddingInfo = data.embedding_info;
+                    const llmInfo = data.rag_info;
+                    const knowledgeinfo = data.vectorstore_info;
+                    
+                    document.getElementById('embedding-status').textContent = 
+                        `${embeddingInfo.model_type}: ${embeddingInfo.model_name}`;
+                    document.getElementById('llm-status').textContent = 
+                        `${llmInfo.llm_provider}: ${llmInfo.llm_model}`;
+                    document.getElementById('knowledge-status').textContent = 
+                        `${knowledgeinfo.document_count} `;
+                    document.getElementById('conversation-status').textContent = 
+                        `${llmInfo.status} `;
+                })
+                .catch(error => {
+                    console.error('检查系统状态失败:', error);
+                });
+        }
+
+        // 设置文件上传
+        function setupFileUpload() {
+            const uploadArea = document.getElementById('uploadArea');
+            const fileInput = document.getElementById('fileInput');
+
+            // 拖拽事件
+            uploadArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+
+            uploadArea.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+            });
+
+            uploadArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                handleFiles(e.dataTransfer.files);
+            });
+
+            // 文件选择事件
+            fileInput.addEventListener('change', function(e) {
+                handleFiles(e.target.files);
+            });
+        }
+
+        // 处理文件上传
+        function handleFiles(files) {
+            const fileList = document.getElementById('fileList');
+            const uploadStatus = document.getElementById('uploadStatus');
+            const t = translations[currentLanguage];
+            
+            fileList.innerHTML = '';
+            
+            Array.from(files).forEach(file => {
+                if (isFileAllowed(file)) {
+                    uploadFile(file);
+                } else {
+                    showStatus(t.fileTypeNotSupported + ': ' + file.name, 'error', uploadStatus);
+                }
+            });
+        }
+
+        // 检查文件类型是否允许
+        function isFileAllowed(file) {
+            const allowedTypes = ['text/plain', 'application/pdf', 
+                               'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                               'application/vnd.openxmlformats-officedocument.presentationml.presentation'];
+            const allowedExtensions = ['.txt', '.pdf', '.docx', '.pptx'];
+            
+            return allowedTypes.includes(file.type) || 
+                   allowedExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+        }
+
+        // 上传文件
+        function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const uploadStatus = document.getElementById('uploadStatus');
+            const t = translations[currentLanguage];
+            
+            showStatus(`${t.uploading}: ${file.name}`, 'info', uploadStatus);
+
+            fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    showStatus(`${file.name}: ${data.message}`, 'success', uploadStatus);
+                    addFileToList(file, true);
+                } else {
+                    showStatus(`${file.name}: ${data.error}`, 'error', uploadStatus);
+                    addFileToList(file, false);
+                }
+            })
+            .catch(error => {
+                showStatus(`${file.name}: ${t.uploadFailed}`, 'error', uploadStatus);
+                addFileToList(file, false);
+            });
+        }
+
+        // 添加文件到列表
+        function addFileToList(file, success) {
+            const fileList = document.getElementById('fileList');
+            const fileItem = document.createElement('div');
+            fileItem.className = 'alert alert-' + (success ? 'success' : 'danger');
+            fileItem.innerHTML = `
+                <i class="fas fa-${success ? 'check' : 'times'}"></i>
+                ${file.name} (${(file.size / 1024).toFixed(2)} KB)
+            `;
+            fileList.appendChild(fileItem);
+        }
+
+        // 设置搜索功能
+        function setupSearch() {
+            const searchInput = document.getElementById('searchQuery');
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchKnowledge();
+                }
+            });
+        }
+
+        // 搜索知识
+        function searchKnowledge() {
+            const query = document.getElementById('searchQuery').value.trim();
+            const k = document.getElementById('searchCount').value;
+            const resultsDiv = document.getElementById('searchResults');
+            const loading = document.getElementById('searchLoading');
+
+            if (!query) {
+                showStatus('请输入搜索关键词', 'error', resultsDiv);
+                return;
+            }
+
+            loading.style.display = 'block';
+            resultsDiv.innerHTML = '';
+
+            fetch('/api/search', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ query: query, k: parseInt(k) })
+            })
+            .then(response => response.json())
+            .then(data => {
+                loading.style.display = 'none';
+                displaySearchResults(data.results, data.count);
+            })
+            .catch(error => {
+                loading.style.display = 'none';
+                showStatus('搜索失败，请稍后重试', 'error', resultsDiv);
+            });
+        }
+
+        // 显示搜索结果
+        function displaySearchResults(results, count) {
+            const resultsDiv = document.getElementById('searchResults');
+            const t = translations[currentLanguage];
+            
+            if (results.length === 0) {
+                resultsDiv.innerHTML = `<div class="alert alert-info">${t.noResults}</div>`;
+                return;
+            }
+
+            resultsDiv.innerHTML = `
+                <div class="alert alert-success">
+                    ${t.foundResults} ${count} ${t.results}
+                </div>
+            `;
+
+            results.forEach((result, index) => {
+                const resultItem = document.createElement('div');
+                resultItem.className = 'search-result';
+                resultItem.innerHTML = `
+                    <h6><i class="fas fa-file-alt"></i> ${t.result} ${index + 1}</h6>
+                    <p>${result.content}</p>
+                    <div class="metadata">
+                        <small>
+                            <i class="fas fa-info-circle"></i>
+                            ${t.source}: ${result.metadata.source || t.unknown} |
+                            ${t.type}: ${result.metadata.type || t.unknown}
+                            ${result.similarity ? `<span class="similarity-badge">${t.similarity}: ${(result.similarity * 100).toFixed(1)}%</span>` : ''}
+                        </small>
+                    </div>
+                `;
+                resultsDiv.appendChild(resultItem);
+            });
+        }
+
+        // 设置聊天功能
+        function setupChat() {
+            const chatInput = document.getElementById('chatQuery');
+            const tempSlider = document.getElementById('temperature');
+            const tempValue = document.getElementById('tempValue');
+            
+            tempSlider.addEventListener('input', function() {
+                tempValue.textContent = this.value;
+            });
+        }
+
+        // 发送聊天消息
+        function sendChatMessage() {
+            const query = document.getElementById('chatQuery').value.trim();
+            const k = document.getElementById('chatK').value;
+            const temperature = document.getElementById('temperature').value;
+            
+            if (!query) {
+                return;
+            }
+
+            // 添加用户消息到聊天界面
+            addChatMessage(query, 'user');
+            
+            // 清空输入框
+            document.getElementById('chatQuery').value = '';
+            
+            // 显示加载状态
+            const loading = document.getElementById('chatLoading');
+            loading.style.display = 'block';
+            
+            // 发送RAG请求
+            fetch('/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+                    query: query, 
+                    k: parseInt(k),
+                    temperature: parseFloat(temperature)
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                loading.style.display = 'none';
+                
+                if (data.success) {
+                    // 显示AI回答
+                    addChatMessage(data.response, 'assistant');
+                    
+                    // 保存上下文信息
+                    if (data.context_docs) {
+                        contextDocs = data.context_docs;
+                        showContextInfo(data.context_docs);
+                    }
+                    
+                    if (data.conversation_history) {
+                        conversationHistory = data.conversation_history;
+                    }
+                } else {
+                    addChatMessage('抱歉，处理您的问题时出现了错误：' + data.error, 'assistant');
+                }
+            })
+            .catch(error => {
+                loading.style.display = 'none';
+                addChatMessage('抱歉，系统出现了错误，请稍后重试。', 'assistant');
+            });
+        }
+
+        // 添加聊天消息到界面
+        function addChatMessage(message, role) {
+            const chatContainer = document.getElementById('chatContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-message chat-${role}`;
+            
+            const roleIcon = role === 'user' ? 'user' : 'robot';
+            const t = translations[currentLanguage];
+            const roleName = role === 'user' ? t.you : t.aiAssistant;
+            
+            messageDiv.innerHTML = `
+                <strong><i class="fas fa-${roleIcon}"></i> ${roleName}:</strong> ${message}
+            `;
+            
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // 显示上下文信息
+        function showContextInfo(contextDocs) {
+            const chatStatus = document.getElementById('chatStatus');
+            
+            let contextHtml = '<div class="context-info">';
+            contextHtml += '<strong>检索到的知识片段:</strong><br>';
+            
+            contextDocs.forEach((doc, index) => {
+                contextHtml += `${index + 1}. ${doc.metadata.source || '未知来源'} - 相似度: ${((doc.similarity || 0) * 100).toFixed(1)}%<br>`;
+            });
+            
+            contextHtml += '</div>';
+            chatStatus.innerHTML = contextHtml;
+            
+            // 5秒后自动清除
+            setTimeout(() => {
+                chatStatus.innerHTML = '';
+            }, 5000);
+        }
+
+        // 清空聊天
+        function clearChat() {
+            const chatContainer = document.getElementById('chatContainer');
+            const chatStatus = document.getElementById('chatStatus');
+            const t = translations[currentLanguage];
+            
+            // 清空界面
+            chatContainer.innerHTML = `
+                <div class="chat-message chat-assistant">
+                    <strong><i class="fas fa-robot"></i> ${t.aiAssistant}:</strong> ${t.chatCleared}
+                </div>
+            `;
+            
+            // 清空状态
+            chatStatus.innerHTML = '';
+            
+            // 请求清空对话历史
+            fetch('/api/clear_conversation', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('对话历史已清空');
+                }
+            });
+        }
+
+        // 添加文本知识
+        function addText() {
+            const text = document.getElementById('textInput').value.trim();
+            const title = document.getElementById('textTitle').value.trim();
+            const textStatus = document.getElementById('textStatus');
+            const t = translations[currentLanguage];
+
+            if (!text) {
+                showStatus(t.enterTextContent, 'error', textStatus);
+                return;
+            }
+
+            fetch('/api/add_text', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ text: text, title: title })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    showStatus(data.message, 'success', textStatus);
+                    document.getElementById('textInput').value = '';
+                    document.getElementById('textTitle').value = '';
+                } else {
+                    showStatus(data.error, 'error', textStatus);
+                }
+            })
+            .catch(error => {
+                showStatus(t.addFailed, 'error', textStatus);
+            });
+        }
+
+        // 显示状态消息
+        function showStatus(message, type, container) {
+            const statusDiv = document.createElement('div');
+            statusDiv.className = `status-message status-${type}`;
+            statusDiv.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'times' : 'info'}"></i>
+                ${message}
+            `;
+            
+            container.appendChild(statusDiv);
+            
+            // 3秒后自动移除
+            setTimeout(() => {
+                statusDiv.remove();
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
