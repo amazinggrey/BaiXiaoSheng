@@ -23,6 +23,33 @@ CORS(app)
 # 初始化 RAG 系统
 rag_system = langchain_rag_system()
 
+def _safe_delete_file(file_path):
+    """安全删除文件，处理文件锁定问题"""
+    import time
+    
+    max_retries = 5
+    retry_delay = 0.5  # 秒
+    
+    for attempt in range(max_retries):
+        try:
+            if os.path.exists(file_path):
+                os.unlink(file_path)
+                print(f"✓ 临时文件已删除: {file_path}")
+                return True
+        except PermissionError as e:
+            if attempt < max_retries - 1:
+                print(f"⚠ 文件被锁定，等待 {retry_delay} 秒后重试... (尝试 {attempt + 1}/{max_retries})")
+                time.sleep(retry_delay)
+                retry_delay *= 2  # 指数退避
+            else:
+                print(f"✗ 无法删除临时文件: {file_path}, 错误: {e}")
+                return False
+        except Exception as e:
+            print(f"✗ 删除临时文件时发生错误: {file_path}, 错误: {e}")
+            return False
+    
+    return False
+
 def allowed_file(filename):
     """检查文件类型是否允许"""
     allowed_extensions = {'txt', 'pdf', 'docx', 'pptx', 'xlsx', 'xls', 'csv'}
@@ -89,8 +116,8 @@ def upload_file():
                     return jsonify({"error": "向量存储添加失败"}), 500
                     
             finally:
-                # 删除临时文件
-                os.unlink(tmp_file.name)
+                # 安全删除临时文件，处理文件锁定问题
+                _safe_delete_file(tmp_file.name)
                 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
