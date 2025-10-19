@@ -87,13 +87,55 @@ class RAGSystem:
                 base_url=os.getenv("LLM_BASE_URL")
             )
         
-        # 初始化 LLM
-        self.llm = ChatOpenAI(
-            model=os.getenv("LLM_MODEL"),
-            base_url=os.getenv("LLM_BASE_URL"),
-            temperature=0,
-            openai_api_key=os.getenv("LLM_API_KEY")
-        )
+        # 初始化 LLM - 根据配置选择合适的LLM模型
+        llm_type = os.getenv("LLM_TYPE", "openai")
+        
+        if llm_type == "ollama":
+            from langchain_ollama import ChatOllama
+            self.llm = ChatOllama(
+                model=os.getenv("OLLAMA_LLM_MODEL", "llama2"),
+                base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
+                temperature=0
+            )
+        elif llm_type == "openai":
+            self.llm = ChatOpenAI(
+                model=os.getenv("LLM_MODEL", "gpt-3.5-turbo"),
+                base_url=os.getenv("LLM_BASE_URL"),
+                temperature=0,
+                openai_api_key=os.getenv("LLM_API_KEY")
+            )
+        elif llm_type == "huggingface":
+            from langchain_huggingface import HuggingFaceEndpoint
+            self.llm = HuggingFaceEndpoint(
+                repo_id=os.getenv("HUGGINGFACE_MODEL", "microsoft/DialoGPT-medium"),
+                task="text-generation",
+                temperature=0,
+                huggingfacehub_api_token=os.getenv("HUGGINGFACE_API_TOKEN")
+            )
+        elif llm_type == "anthropic":
+            from langchain_anthropic import ChatAnthropic
+            self.llm = ChatAnthropic(
+                model=os.getenv("ANTHROPIC_MODEL", "claude-3-sonnet-20240229"),
+                temperature=0,
+                anthropic_api_key=os.getenv("ANTHROPIC_API_KEY")
+            )
+        elif llm_type == "azure":
+            from langchain_openai import AzureChatOpenAI
+            self.llm = AzureChatOpenAI(
+                azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+                azure_deployment=os.getenv("AZURE_DEPLOYMENT_NAME"),
+                openai_api_version=os.getenv("OPENAI_API_VERSION", "2023-12-01-preview"),
+                temperature=0,
+                openai_api_key=os.getenv("AZURE_OPENAI_API_KEY")
+            )
+        else:
+            # 默认使用 OpenAI 兼容接口
+            self.llm = ChatOpenAI(
+                model=os.getenv("LLM_MODEL", "gpt-3.5-turbo"),
+                base_url=os.getenv("LLM_BASE_URL"),
+                temperature=0,
+                openai_api_key=os.getenv("LLM_API_KEY")
+            )
         
         # 初始化文本分割器
         self.text_splitter = RecursiveCharacterTextSplitter(
@@ -497,9 +539,22 @@ class RAGSystem:
             else:
                 embedding_model_name = str(type(self.embedding_model).__name__)
             
+            # 获取LLM提供商和模型名称
+            llm_provider = os.getenv("LLM_TYPE", "openai")
+            llm_model_name = ""
+            
+            if hasattr(self.llm, 'model'):
+                llm_model_name = self.llm.model
+            elif hasattr(self.llm, 'model_name'):
+                llm_model_name = self.llm.model_name
+            elif hasattr(self.llm, 'repo_id'):
+                llm_model_name = self.llm.repo_id
+            else:
+                llm_model_name = str(type(self.llm).__name__)
+            
             return {
-                "llm_provider": "OpenAI",
-                "llm_model": self.llm.model_name,
+                "llm_provider": llm_provider,
+                "llm_model": llm_model_name,
                 "embedding_model": embedding_model_name,
                 "collection_name": self.collection_name,
                 "chunk_size": self.chunk_size,
