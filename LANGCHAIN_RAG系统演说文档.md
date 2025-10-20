@@ -247,14 +247,31 @@ EMBEDDING_MODEL_NAME=Qwen/Qwen3-Embedding-0.6B
 
 #### 语言模型配置
 ```python
-# OpenAI 兼容接口
-LLM_PROVIDER=openai
+# LLM类型配置 (支持: openai, ollama, huggingface, anthropic, azure)
+LLM_TYPE=openai
+
+# OpenAI兼容接口配置
 LLM_MODEL=deepseek-r1
 LLM_BASE_URL=https://cloud.infini-ai.com/maas/v1
+LLM_API_KEY=your_api_key
 
-# Ollama 本地模型
-LLM_PROVIDER=ollama
-LLM_MODEL=qwen:7b
+# Ollama配置
+OLLAMA_LLM_MODEL=qwen:7b
+OLLAMA_BASE_URL=http://localhost:11434
+
+# HuggingFace配置
+HUGGINGFACE_MODEL=microsoft/DialoGPT-medium
+HUGGINGFACE_API_TOKEN=your_huggingface_token_here
+
+# Anthropic配置
+ANTHROPIC_MODEL=claude-3-sonnet-20240229
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+
+# Azure OpenAI配置
+AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+AZURE_DEPLOYMENT_NAME=your-deployment-name
+AZURE_OPENAI_API_KEY=your_azure_openai_api_key_here
+OPENAI_API_VERSION=2023-12-01-preview
 ```
 
 ### 2. 智能记忆管理
@@ -1048,5 +1065,6 @@ def analyze_query_performance(self, query: str):
 *本文档最后更新时间：2025年10月*
 *版本：v1.0*
 *作者：礼尚往来 开发团队*
+
 
 
